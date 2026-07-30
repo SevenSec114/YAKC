@@ -234,8 +234,11 @@ Yes. It's MIT-licensed, fully offline, and never stores or transmits anything yo
 - [x] Gamepad / controller visualizer (buttons, sticks, triggers)
 - [x] On-screen virtual keyboard display style *(with a visual "pick which keys to show" selector)*
 - [x] OBS browser-source output *(transparent overlay over HTTP)*
-- [ ] Presets, themes & profiles (named config snapshots)
-- [ ] Settings pickers — live process list for the filter, font & monitor dropdowns
+- [x] Presets & profiles *(named config snapshots + bundled starter presets, import/export)*
+- [x] Settings pickers — live process list for the filter, font & monitor dropdowns
+- [x] Cross-platform process filter *(incl. Wayland/KDE via KWin)*
+- [x] Independent widget positions + alignment (magnet) guides in move mode
+- [ ] Controller touchpad (DualSense) as its own widget
 
 ## Buy me a coffee
 
