@@ -7,6 +7,15 @@ use tauri::{AppHandle, Manager};
 
 pub type SharedConfig = Arc<RwLock<Config>>;
 
+/// A widget's on-screen top-left position in pixels.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct WidgetPos {
+    #[serde(deserialize_with = "lenient_f64")]
+    pub x: f64,
+    #[serde(deserialize_with = "lenient_f64")]
+    pub y: f64,
+}
+
 /// Runtime configuration. Field names serialize to the same camelCase keys the
 /// Electron version used, so existing config.json files keep working.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,6 +47,24 @@ pub struct Config {
     pub show_keyboard_click: bool,
     pub show_mouse_click: bool,
     pub show_mouse_coordinates: bool,
+    /// Show a dot-in-a-ring widget that reacts to mouse movement.
+    pub show_mouse_movement: bool,
+    /// Show scroll-wheel ticks as popup tokens (⤒/⤓/⇤/⇥).
+    pub show_mouse_scroll: bool,
+    /// Show gamepad/controller input: buttons as popups, sticks/triggers in a widget.
+    pub show_gamepad: bool,
+    /// How far the mouse-movement dot travels per pixel moved (higher = more sensitive).
+    #[serde(deserialize_with = "lenient_f64")]
+    pub mouse_movement_sensitivity: f64,
+    /// Seconds for the mouse-movement dot to spring back to center once still.
+    #[serde(deserialize_with = "lenient_f64")]
+    pub mouse_movement_decay_seconds: f64,
+    /// Overall scale of the mouse/gamepad widgets (1.0 = default size).
+    #[serde(deserialize_with = "lenient_f64")]
+    pub device_widget_scale: f64,
+    /// Show the overlay on this screen. Turn off to display only in the OBS
+    /// browser source (so it isn't captured twice or seen by you locally).
+    pub show_overlay_on_screen: bool,
     pub only_keys_with_modifiers: bool,
     pub show_space_as_unicode: bool,
     pub text_to_symbols: bool,
@@ -61,10 +88,31 @@ pub struct Config {
     /// "text": popups behave like a text editor — only typed characters show,
     /// Backspace deletes. "raw": every key shows (modifiers, ⌫, arrows, …).
     pub display_mode: String,
+    /// Overlay rendering style. "popups": fading key popups (default).
+    /// "keyboard": an on-screen keyboard whose caps light up as you type.
+    pub display_style: String,
+    /// "keyboard" style only: which physical keys (W3C codes, e.g. "KeyA",
+    /// "Space") to render. Empty = show the whole keyboard. Lets users trim it
+    /// down to just the keys they care about (e.g. WASD + a few binds).
+    pub keyboard_visible_keys: Vec<String>,
     /// Override display text for any key. Key = internal key id
     /// ("backspace", "f1", "meta", "ctrl", …), value = custom display text.
     /// E.g. {"meta": "MOD"} shows "MOD" instead of "META" in combos.
     pub key_label_overrides: HashMap<String, String>,
+    /// Independent top-left positions (px) per overlay widget, keyed by id
+    /// ("mouse", "gamepad"). Absent = the widget's default placement. Set by
+    /// drag-to-position so each widget can live anywhere without overlapping.
+    pub widget_positions: HashMap<String, WidgetPos>,
+    /// Show alignment guide lines and snap widgets to each other / the screen
+    /// center while dragging in move mode. On by default; toggled from the move
+    /// toolbar.
+    pub snap_to_guides: bool,
+    /// Serve the overlay over HTTP for use as an OBS Browser source. Opt-in;
+    /// changing this needs an app restart to start/stop the server.
+    pub obs_server_enabled: bool,
+    /// Port the OBS browser-source server listens on (localhost).
+    #[serde(deserialize_with = "lenient_u16")]
+    pub obs_server_port: u16,
 }
 
 impl Config {
@@ -92,6 +140,13 @@ impl Default for Config {
             show_keyboard_click: true,
             show_mouse_click: false,
             show_mouse_coordinates: false,
+            show_mouse_movement: false,
+            show_mouse_scroll: false,
+            show_gamepad: false,
+            mouse_movement_sensitivity: 1.0,
+            mouse_movement_decay_seconds: 0.4,
+            device_widget_scale: 1.0,
+            show_overlay_on_screen: true,
             only_keys_with_modifiers: false,
             show_space_as_unicode: false,
             text_to_symbols: true,
@@ -107,7 +162,13 @@ impl Default for Config {
             filter_check_every_second: 0.5,
             toggle_capture_hotkey: "Ctrl+Alt+Y".into(),
             display_mode: "text".into(),
+            display_style: "popups".into(),
+            keyboard_visible_keys: Vec::new(),
             key_label_overrides: HashMap::new(),
+            widget_positions: HashMap::new(),
+            snap_to_guides: true,
+            obs_server_enabled: false,
+            obs_server_port: 7238,
         }
     }
 }
@@ -129,6 +190,10 @@ fn lenient_f64<'de, D: Deserializer<'de>>(deserializer: D) -> Result<f64, D::Err
 
 fn lenient_usize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<usize, D::Error> {
     Ok(lenient_f64(deserializer)?.max(0.0) as usize)
+}
+
+fn lenient_u16<'de, D: Deserializer<'de>>(deserializer: D) -> Result<u16, D::Error> {
+    Ok(lenient_f64(deserializer)?.clamp(0.0, 65535.0) as u16)
 }
 
 /// Path of the active config file: a config.json next to the executable wins

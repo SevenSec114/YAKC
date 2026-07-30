@@ -1,6 +1,6 @@
 [package]
 name = "yakc"
-version = "2.0.0"
+version = "2.8.0"
 description = "YAKC - Yet Another Key Caster"
 authors = ["IAMMODEV"]
 license = "MIT"
@@ -18,25 +18,45 @@ tauri-plugin-single-instance = "2"
 tauri-plugin-dialog = "2"
 tts = "0.26"
 active-win-pos-rs = "0.9"
+# Cross-platform gamepad/controller input (XInput on Windows, IOKit/GameController
+# on macOS, evdev on Linux — works on X11 and Wayland).
+gilrs = "0.11"
+# Cross-platform process enumeration for the "pick from running apps" process
+# filter (no per-OS code; works on Windows, macOS and Linux).
+sysinfo = { version = "0.33", default-features = false, features = ["system"] }
 
 # Windows & macOS: global hook via the OS APIs (WH_KEYBOARD_LL / CGEventTap),
 # with OS-native key-to-character translation for any keyboard language.
 [target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
 rdev = "0.5"
 
+# Windows: read the active keyboard layout (ToUnicodeEx) to label the on-screen
+# keyboard for the user's real layout.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_UI_Input_KeyboardAndMouse",
+] }
+
 # Linux: read /dev/input directly so capture works identically on X11 and
 # Wayland; xkbcommon translates keycodes per the active layout.
 [target.'cfg(target_os = "linux")'.dependencies]
 evdev = "0.13"
 xkbcommon = "0.8"
+# Read the focused window on Wayland (which hides it from X11 tools) via the
+# compositor's D-Bus interface — used for the process filter on KDE/KWin.
+zbus = "4"
 # Fetch the compositor's exact keymap (wl_keyboard) so any layout the user
 # configured in their desktop settings is honored on Wayland.
 wayland-client = "0.31"
 libc = "0.2"
 
-# macOS: raise the overlay to screen-saver window level (above fullscreen apps).
+# macOS: raise the overlay to screen-saver window level (above fullscreen apps);
+# read the active keyboard layout (UCKeyTranslate/TIS) to label the on-screen
+# keyboard for the user's real layout.
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
+core-foundation = "0.10"
 
 [profile.release]
 strip = true

@@ -3,8 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>YAKC - Yet Another Key Caster</title>
+    <title>YAKC — OBS overlay</title>
     <link rel="stylesheet" href="style.css" />
+    <!-- Shim must run before the deferred overlay scripts so window.__TAURI__ exists. -->
+    <script src="tauri-shim.js"></script>
     <script defer src="overlay.js"></script>
     <script defer src="devices.js"></script>
     <script defer src="keyboard-layout.js"></script>
